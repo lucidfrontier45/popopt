@@ -1,6 +1,6 @@
 use anyhow::Result as AnyResult;
 use ordered_float::NotNan;
-use rand::{rngs::StdRng, thread_rng, Rng, SeedableRng};
+use rand::{rngs::StdRng, Rng, SeedableRng};
 
 use crate::interface::{Problem, Score, Variable};
 
@@ -13,8 +13,8 @@ pub struct SimpleInitializer {
 
 impl SimpleInitializer {
     pub fn new(bounds: Vec<(NotNan<f64>, NotNan<f64>)>) -> Self {
-        let mut rng = StdRng::from_entropy();
-        let seed: u64 = rng.gen();
+        let mut rng = StdRng::from_os_rng();
+        let seed: u64 = rng.random();
         Self::with_seed(bounds, seed)
     }
 
@@ -39,7 +39,7 @@ impl Initializer for SimpleInitializer {
         for _ in 0..population_size {
             let mut x = Vec::new();
             for (lower, upper) in &self.bounds {
-                x.push(rng.gen_range(lower.into_inner()..upper.into_inner()));
+                x.push(rng.random_range(lower.into_inner()..upper.into_inner()));
             }
             let x = Variable::from_vec(x);
             let score = problem.evaluate(&x)?;
@@ -64,10 +64,10 @@ impl MutationOperator for SimpleMutationOperator {
     fn mutate_one(&self, current_population: &[Variable]) -> AnyResult<Variable> {
         // randomly select three distinct indices
         let n = current_population.len();
-        let mut rng = thread_rng();
+        let mut rng = rand::rng();
         let mut indices = vec![];
         while indices.len() < 3 {
-            let index = rng.gen_range(0..n);
+            let index = rng.random_range(0..n);
             if !indices.contains(&index) {
                 indices.push(index);
             }
@@ -94,9 +94,9 @@ impl SimpleCrossoverOperator {
 impl CrossoverOperator for SimpleCrossoverOperator {
     fn crossover_one(&self, v_current: &Variable, v_mutant: &Variable) -> AnyResult<Variable> {
         let mut v_trial: Vec<f64> = Vec::with_capacity(v_current.len());
-        let mut rng = thread_rng();
+        let mut rng = rand::rng();
         for (x_current, x_mutant) in v_current.iter().zip(v_mutant.iter()) {
-            let r: f64 = rng.gen_range(0.0..1.0);
+            let r: f64 = rng.random_range(0.0..1.0);
             let x_trial = if r < self.crossover_rate.into_inner() {
                 x_mutant
             } else {
